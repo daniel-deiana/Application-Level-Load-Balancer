@@ -1,6 +1,6 @@
 package main
-
 import (
+	"load_balancing/data"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,37 +8,82 @@ import (
 	"io"
 )
 
+/*
+	Struct used to model a backend server, storing it's
+	status, the port where to reach it and other 
+	metadata (protocol, etc..).
+*/
+
+/*
+	In go there isn't really a enum type
+	But you can emulate it using constrained int type 
+	like the following 
+*/
+
+type backendState int 
+
+/*
+ define constant of type backendState with incremental values
+ Each constant is one of the values of our enum
+*/
+
+const (
+	StateIdle backendState = iota
+	StateConnected
+	StateError
+	StateSleeping
+)
+
+var stateMapping = map[backendState]string {
+	StateIdle 			: "idle",
+	StateConnected 		: "connected",
+	StateError			: "error",
+	StateSleeping		: "sleep",
+}
+
+/*
+	We are implementing the String() method that implements the Stringer 
+	interface, this is used to print our enum returning a string
+*/
+func (bs backendState) String() string {
+	return stateMapping[bs] 
+}
+
+type backendServer struct {
+	state 		backendState
+	host 		string
+	protocols 	[]string 
+}
+
+
+func newBackendServer(newState backendState, newHost string, newProtocols []string) backendServer {
+	return backendServer{state : newState, host : newHost, protocols : newProtocols}
+}
+
 /*	
 	Selects the next server based on a simple round robin algorithm.
 */
-
-type backendRegMessage struct{
-	Port string `json:"Port"`
-}
-
-func GetNextServerRR(servers map[int]string, current int) (selected_server string, new_current int) {
-	selected_server = servers[current]
-	current = (current + 1) % len(servers)
-	return selected_server, new_current
+func GetNextServerRR(servers map[int]backendServer, current int) (serverHost string, new_current int) {
+	server := servers[current]
+	new_current = (current + 1) % len(servers)
+	fmt.Printf("RR: THE HOST IM RETURNING IS ", server.host)
+	return server.host, new_current
 }
 
 func main () {
-
 	/*
 		I want to have a go server that has a list of other urls 
 		(the actual http server to offload requests to)
 		Simply start by just implmenting a round robin policy
 	*/
-
 	/*
 		Istantiating the Load balancer and dispatching 
 		http requests to backend servers 
 	*/
-
 	num_backends := 0 // number of backends registered
 	server_index := 0
-
-	backends := make(map[int]string)
+	backends := make(map[int]backendServer)
+	
 	s := &http.Server{
 		Addr:           ":8080",
 		Handler:        nil,
@@ -55,17 +100,15 @@ func main () {
 	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		buf, _ := io.ReadAll(r.Body)
 		fmt.Printf("the buf contains %s\n", buf)
-		var backendMsg backendRegMessage
-		
+		var backendMsg data.BackendRegMessage		
 		err := json.Unmarshal(buf,&backendMsg)
-
 		if (err != nil) { 
 			fmt.Printf("Error code of Unmarshalling is %d", err)
-		}
-		fmt.Printf("the backend server sent a registration request containing %s\n", backendMsg.Port)
-		host := "localhost:" + backendMsg.Port
-		backends[num_backends] = host
-		fmt.Printf("Registered new backend, key is %d and host is %s", num_backends, host)
+		}	
+		fmt.Printf("the backend server sent a registration request containing %s\n", backendMsg.Host)
+		serverProtocols := []string{"http"}
+		backends[num_backends] = newBackendServer(StateConnected, backendMsg.Host, serverProtocols)
+		fmt.Printf("Registered new backend, key is %d and host is %s", num_backends, backendMsg.Host)
 		num_backends = num_backends + 1
 		fmt.Fprintf(w,"ok registered !")
 	})
@@ -74,7 +117,7 @@ func main () {
 	
 		/* 
 			Redirect the request to a backend server
-			- Pool one of the active backend servers from the pool. 
+			- Select one of the active backend servers from the pool. 
 			- Make a new request for the backend.
 			- Redirect the response of the backend to the client.
 		*/

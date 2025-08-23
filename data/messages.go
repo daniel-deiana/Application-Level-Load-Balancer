@@ -1,6 +1,6 @@
 package data
 
 type BackendRegMessage struct{
-	Port string `json:"Port"`
+	Host string `json:"Host"`
 }
 

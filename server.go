@@ -1,5 +1,4 @@
 package main
-
 import (
 	"fmt"
 	"net/http"
@@ -12,13 +11,7 @@ import (
 	TODO:
 	- Add a struct to model backend servers
 	- Add methods to interact with backend servers, health cheking
-	- Add a registering endpoint on the load balancer
 */
-
-
-type backendInfo {
-
-}
 
 func parsePort() (port string) {
 	parameterArgs := os.Args[1:]
@@ -49,15 +42,12 @@ func main () {
 
 	fmt.Println("The port im sending to the server is %s", port)
 
-	// Todo: make a post request, json encoded body with port number to later 
-	// contact the backend 
-	// using the escape \ because if not it treats as the end of a string
-	jsonStr := "{ \"Port\" : \"" + port +"\" }"
+	
+	// Send host made as localhost:port to load_balancer
+	jsonStr := "{ \"Host\" : \"" + "localhost:" + port +"\" }"
 	// creates a Buffer type (a slice of byte) initializing it with the contents of a string
 	buf := bytes.NewBufferString(jsonStr)
-
 	fmt.Println("printing the byte slice created from the jsonStr %s", buf)
-
 	_, err := http.Post("http://localhost:8080/register", "application/json", buf)
 
 	if (err != nil) {
@@ -82,5 +72,4 @@ func main () {
     })
 
 	s.ListenAndServe()
-
-	}
+}
