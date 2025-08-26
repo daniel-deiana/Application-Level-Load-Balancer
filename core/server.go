@@ -42,11 +42,12 @@ func main () {
 
 	fmt.Println("The port im sending to the server is %s", port)
 
-	
 	// Send host made as localhost:port to load_balancer
 	jsonStr := "{ \"Host\" : \"" + "localhost:" + port +"\" }"
+	
 	// creates a Buffer type (a slice of byte) initializing it with the contents of a string
 	buf := bytes.NewBufferString(jsonStr)
+	
 	fmt.Println("printing the byte slice created from the jsonStr %s", buf)
 	_, err := http.Post("http://localhost:8080/register", "application/json", buf)
 
@@ -54,6 +55,7 @@ func main () {
 		fmt.Printf("error on making the register to the load balancer")
 		return
 	}
+	
 	// send register request to the load balancer 
 	s := &http.Server{
 		Addr:           ":" + port,
@@ -62,13 +64,16 @@ func main () {
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-
+	
 	// ideally here i would want a service discovery phase were i register the backend servers
-
 	http.HandleFunc("/lb", func(w http.ResponseWriter, r *http.Request) {
-    	
+		fmt.Println("The X-forwarded-for is %s", r.Header.Get("X-Forwarded-For"))    	
 		fmt.Println("Backend server at port %s responding to load balancer request!", port)
-    	fmt.Fprint(w, "Backend has responded! Hello client")		
+
+    	// canestr := []string{"cane"}
+		w.Header().Set("dio","cane")
+
+      	fmt.Fprint(w, "Backend has responded! Hello client")		
     })
 
 	s.ListenAndServe()

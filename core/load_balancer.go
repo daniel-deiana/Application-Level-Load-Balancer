@@ -20,8 +20,13 @@ func main () {
 		Istantiating the Load balancer and dispatching 
 		http requests to backend servers 
 	*/
-	num_backends := 0 // number of backends registered
-	server_index := 0
+	var num_backends = 0// number of backends registered
+	var p *int = &num_backends
+
+	// index of the backend to retrieve from map
+	var index int = 0
+	var i *int = &index  
+
 	backends := make(map[int]datamodel.BackendServer)
 	
 	s := &http.Server{
@@ -43,16 +48,16 @@ func main () {
 		fmt.Printf("the buf contains %s\n", buf)
 		var backendMsg datamodel.BackendRegMessage		
 		err := json.Unmarshal(buf,&backendMsg)
-		
+
 		if (err != nil) { 
 			fmt.Printf("Error code of Unmarshalling is %d", err)
 		}	
 		
 		fmt.Printf("the backend server sent a registration request containing %s\n", backendMsg.Host)
 		serverProtocols := []string{"http"}
-		backends[num_backends] = datamodel.NewBackendServer(datamodel.StateConnected, backendMsg.Host, serverProtocols)
+		backends[*p] = datamodel.NewBackendServer(datamodel.StateConnected, backendMsg.Host, serverProtocols)
 		fmt.Printf("Registered new backend, key is %d and host is %s", num_backends, backendMsg.Host)
-		num_backends = num_backends + 1
+		*p = *p + 1
 		fmt.Fprintf(w,"ok registered !")
 	})
 
@@ -63,7 +68,6 @@ func main () {
 	- Redirect the response of the backend to the client.
 	*/
 	http.HandleFunc("/lb", func(w http.ResponseWriter, r *http.Request) {
-
 		if (len(backends) == 0) {
 			fmt.Fprint(w, "There are no backends available to process request\n")		
 			return
@@ -76,18 +80,16 @@ func main () {
 
 		new_req := r.Clone(r.Context())
 		new_req.RequestURI = ""
- 
-		
-		next_server, new_index := algorithm.GetNextServerRR(backends, server_index)
-		server_index = new_index
 
-		new_req.URL.Host = next_server
-		new_req.Host = next_server
+		backendHost := algorithm.GetNextServerRR(backends, i)
+		
+		new_req.Header.Set("X-Forwarded-For", r.RemoteAddr)
+		new_req.URL.Host = backendHost
+		new_req.Host = backendHost
 		new_req.URL.Scheme = "http"
 		
-
-		fmt.Println("the next server is %s", next_server)
-		fmt.Println("the server index is %d", server_index)
+		fmt.Println("the next server is %s", backendHost)
+		fmt.Println("the server index is %d", *i)
 
 		fmt.Printf("the URL of the new req is %s\n", new_req.URL)
 		fmt.Printf("tbe HTTP header of the new req is %s\n",new_req.Host)
@@ -103,8 +105,20 @@ func main () {
 		if (cErr != nil) {
 			panic("Load balancer: error reading backend response")
 		}
+
+		/* 
+		copy the response header from the backend into the response for the client
+		*/
+		
+		for key, value := range r.Header {
+			
+			// Nel video viene fatto in maniera diversa, capire perche
+			w.Header().Set(key,value)
+		}
+
+		fmt.Printf("the response header from the backend said that dio is %s", w.Header().Get("dio"))
+
 		w.Write(content)
-	
 	})
 	s.ListenAndServe()
 }
