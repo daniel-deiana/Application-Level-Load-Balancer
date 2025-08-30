@@ -24,7 +24,6 @@ func main () {
 	}
 
 	rr := algorithm.NewRoundRobinLoadBalancer()
-
 	/*
 	Backend registering API, The backend sends a registering message with 
 	the port number where it will be listening for requests coming from the
@@ -38,6 +37,7 @@ func main () {
 	- Make a new request for the backend.
 	- Redirect the response of the backend to the client.
 	*/
+	
 	http.HandleFunc("/lb", func(w http.ResponseWriter, r *http.Request) {
 		rr.Serve()(w,r)	
 	})

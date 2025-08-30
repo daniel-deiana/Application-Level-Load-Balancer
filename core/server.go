@@ -76,5 +76,9 @@ func main () {
       	fmt.Fprint(w, "Backend has responded! Hello client")		
     })
 
+    http.HandleFunc("/health", func(w http.ResponseWriter, r * http.Request) {
+    	fmt.Fprintf(w, "Received health checking messages")
+    })
+
 	s.ListenAndServe()
 }
