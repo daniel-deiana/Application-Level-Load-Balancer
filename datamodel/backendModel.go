@@ -3,8 +3,6 @@ package datamodel
 import (
 	"net/http/httputil"
 	"net/url"
-	"net/http"
-	"time"
 )
 
 /*
@@ -19,7 +17,7 @@ import (
 	like the following 
 */
 
-type backendState int 
+type BackendState int 
 
 /*
  define constant of type backendState with incremental values
@@ -27,13 +25,13 @@ type backendState int
 */
 
 const (
-	StateIdle backendState = iota
+	StateIdle BackendState = iota
 	StateConnected
 	StateError
 	StateSleeping
 )
 
-var stateMapping = map[backendState]string {
+var stateMapping = map[BackendState]string {
 	StateIdle 			: "idle",
 	StateConnected 		: "connected",
 	StateError			: "error",
@@ -44,12 +42,12 @@ var stateMapping = map[backendState]string {
 	We are implementing the String() method that implements the Stringer 
 	interface, this is used to print our enum returning a string
 */
-func (bs backendState) String() string {
+func (bs BackendState) String() string {
 	return stateMapping[bs] 
 }
 
 type BackendServer struct {
-	State 		backendState
+	State 		BackendState
 	Host 		string
 	Protocols 	[]string
 	Proxy    	*httputil.ReverseProxy
@@ -64,31 +62,6 @@ func NewBackendServer(newHost string, newProtocols []string) (*BackendServer){
 		Host 		: newHost, 
 		Protocols 	: newProtocols,
 		Proxy  		: newProxy,
-	}
-}
-
-/*
-	Make a req to a backendserver and evaluate the new state depending on
-	the response
-*/
-func (bs* BackendServer) UpdateState() {
-	strURL := "http://" + bs.Host + "/health"	
-	
-	client := http.Client{
-    	Timeout: 5 * time.Second,
-	}
-	resp, err := client.Get(strURL)
-	if (err != nil) {
-		bs.State = StateError
-		return
-	}	
-
-	defer resp.Body.Close()
-
-	if (resp.StatusCode == 200 && bs.State != StateConnected) {
-		bs.State = StateConnected 
-	} else if (resp.StatusCode != 200 && bs.State == StateConnected) {
-		bs.State = StateError 
 	}
 }
 

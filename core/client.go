@@ -6,11 +6,6 @@ import (
 	"io/ioutil"
 )
 
-func f() (int) {
-	fmt.Printf("Redirect function")
-	return 1
-}
-
 func main() {
 	
 	fmt.Printf("Hello world")
