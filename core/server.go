@@ -70,6 +70,9 @@ func main () {
 		fmt.Println("The X-forwarded-for is %s", r.Header.Get("X-Forwarded-For"))    	
 		fmt.Println("Backend server at port %s responding to load balancer request!", port)
 
+		var xfwdHost = r.Header.Get("X-Forwarded-Host")
+    	fmt.Printf("the x fowarded host of the client is %s", xfwdHost)
+
     	// canestr := []string{"cane"}
 		w.Header().Set("dio","cane")
 

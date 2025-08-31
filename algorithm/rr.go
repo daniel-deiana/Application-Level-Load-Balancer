@@ -1,5 +1,4 @@
 package algorithm
-
 import (
 	"load_balancer/helper"
 	"load_balancer/datamodel"
@@ -15,12 +14,7 @@ import (
 /*	
 - Selects the next server based on a simple round robin algorithm
 */
-
 type RoundRobinLoadBalancer struct {
-
-	// TODO: Add a separate array for proxies so that the rr can loop on that 
-	// This should be done to facilitate the rejoining of servers
-	// currently using the integer as a key blocks a fast checking for duplicates 
 	servers 			map[string]*datamodel.BackendServer
 	index 				int64
 	length  			int64
@@ -30,8 +24,8 @@ type RoundRobinLoadBalancer struct {
 }
 
 func (rr *RoundRobinLoadBalancer) showState() {
-	for index, server := range rr.servers {
-		fmt.Printf("the server at index %d is %s\n",index, server.Host)
+	for host, server := range rr.servers {
+		fmt.Printf("the server at index %s is %s\n",host, server.Host)
 		fmt.Printf("state : %s\n", server.State)
 	}
 }
@@ -47,13 +41,10 @@ func NewRoundRobinLoadBalancer() *RoundRobinLoadBalancer {
 }
 
 func (rr *RoundRobinLoadBalancer) startMonitoringBackends() {
-	
-
 	rr.tickerRefreshStates = time.NewTicker(1000 * time.Millisecond)
     rr.stopMonitoring = make(chan bool)
     go rr.HandleMonitorBackends()
 }
-
 
 func (rr *RoundRobinLoadBalancer) HandleMonitorBackends() {
     for {
@@ -88,7 +79,7 @@ func (rr* RoundRobinLoadBalancer) updateBackendState(bs *datamodel.BackendServer
 	strURL := "http://" + bs.Host + "/health"	
 	
 	client := http.Client{
-    	Timeout: 5 * time.Second,
+    	Timeout: 2* time.Second,
 	}
 	resp, err := client.Get(strURL)
 		
@@ -108,11 +99,12 @@ func (rr* RoundRobinLoadBalancer) updateBackendState(bs *datamodel.BackendServer
 	if (resp.StatusCode == 200 && bs.State != datamodel.StateConnected) {
 		newState = datamodel.StateConnected 
 		rr.proxies = append(rr.proxies, bs.Proxy)
+		atomic.AddInt64(&rr.length,1)
 	} else if (resp.StatusCode != 200 && bs.State == datamodel.StateConnected) {
 		newState = datamodel.StateError 
 		rr.proxies = helper.RemoveByValue(rr.proxies, bs.Proxy)
+		atomic.AddInt64(&rr.length,-1)
 	}
-
 }
 
 /*
@@ -127,20 +119,35 @@ func (rr *RoundRobinLoadBalancer) HandleBackendRegister(w http.ResponseWriter, r
 		rr.showState()
 }
 
-
-// todo refact 
 func (rr *RoundRobinLoadBalancer) addNewBackend (Host string) {
 	var protocols = []string{"http"}
-	// add to backends map
-	newBs := datamodel.NewBackendServer(Host,protocols)
+
+	// NB: if you try to search a key in the dict it returns the value and the presence
+	if _, isPresent := rr.servers[Host]; isPresent {
+		fmt.Printf("The server is already registered in the load balancer")
+		return
+	}
+
+
+	myRewrite := func(pr *httputil.ProxyRequest) {
+		// Print all incoming client request headers
+
+		fmt.Printf("the client URL.Host is %s", pr.In.Host)
+
+		pr.Out.URL.Scheme = "http"
+		pr.Out.URL.Host = Host
+		pr.Out.Header.Set("X-Forwarded-Host", pr.In.RemoteAddr)
+	}
+
+
+	newBs := datamodel.NewBackendServer(Host,protocols, myRewrite)
 	rr.servers[Host] = newBs	
-	// add a new proxy to the list of current backends
+	
 	rr.proxies = append(rr.proxies, newBs.Proxy)
+	// add a new proxy to the list of current backends
 	atomic.AddInt64(&rr.length,1)
 }
 
-
-// todo refact 
 func (rr *RoundRobinLoadBalancer) getNext() *httputil.ReverseProxy {
 	atomic.AddInt64(&rr.index,1)
 	return rr.proxies[rr.index%rr.length]
@@ -149,5 +156,8 @@ func (rr *RoundRobinLoadBalancer) getNext() *httputil.ReverseProxy {
 func (rr *RoundRobinLoadBalancer) Serve() func(w http.ResponseWriter, r *http.Request) {
 	return func (w http.ResponseWriter, r *http.Request) {
 		rr.getNext().ServeHTTP(w,r)
+		
+		// Handle the case where the server is not responding
+
 	} 
 }

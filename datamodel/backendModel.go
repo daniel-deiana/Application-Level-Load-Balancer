@@ -53,9 +53,12 @@ type BackendServer struct {
 	Proxy    	*httputil.ReverseProxy
 }
 
-func NewBackendServer(newHost string, newProtocols []string) (*BackendServer){
+func NewBackendServer(newHost string, newProtocols []string, rewriteHandler func(pr* httputil.ProxyRequest)) (*BackendServer){
 	h,_ := url.Parse("http://"+newHost)
-	var newProxy = httputil.NewSingleHostReverseProxy(h)	
+	var newProxy = httputil.NewSingleHostReverseProxy(h)
+	// update custom write 
+	newProxy.Director = nil
+	newProxy.Rewrite = rewriteHandler
 	var newState = StateConnected
 	return &BackendServer {
 		State : newState , 
