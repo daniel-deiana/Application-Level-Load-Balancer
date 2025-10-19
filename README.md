@@ -4,3 +4,11 @@ To then import you can write `import "mod_name/package_name" `
 
 #### To do:
 - Add locking for operations on proxies slice
+- Study better go packaging
+- study better docker files
+
+
+#### Reminder
+Every time you execute `RUN` inside a docker file a new state and a new image is created so you can inspect that state by starting a container using the id provided by the docker build command, with that you can start a shell and check stuff 
+
+

@@ -1,0 +1,12 @@
+services:
+# Load balancer module
+  load_balancer:
+    build: ./lb
+    working_dir: app/src
+# Backend that implements test API
+  backends:
+    build: ./backends
+    entrypoint: ./backend 8081
+# # Container used for integration tests 
+#   test_runner:
+#     build: ./tests
