@@ -1,3 +1,5 @@
-First you need to create module by using command `go mod init path/to/mod` then if you want to create a package you need to create a folder, the `.go` files in that folder are all in the same package with the name of that folder
+#### Description
+This project implements a simple application level load balancer. A backend can register to the load balancer to be added to the pool of backends to forward the api traffic to them. The backends expose an health API so that the Lb can monitor their state and act if one or more of them goes down.
 
-To then import you can write `import "mod_name/package_name" `
+#### To test
+in the terminal run `docker compose build` to build the containter images of the services described in the compose. After this `docker compose up -d ` to create the newtork of containers and get them running. To see if client request are correctly being server get inside the test containter and run the test script.
