@@ -2,11 +2,19 @@ services:
 # Load balancer module
   load_balancer:
     build: ./lb
-    working_dir: app/src
+    ports:
+      - 8080:8080
 # Backend that implements test API
   backends:
     build: ./backends
-    entrypoint: ./backend 8081
-# # Container used for integration tests 
-#   test_runner:
-#     build: ./tests
+    entrypoint: ./build/backend 8081
+    ports: 
+      - 8081:8081
+    depends_on: 
+      - load_balancer
+# Container used for integration tests 
+  test_runner:
+    build: ./tests
+    depends_on: 
+      - load_balancer
+      - backends

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"time"
+	"net"
 )
 
 /*	
@@ -76,7 +77,7 @@ func (rr *RoundRobinLoadBalancer) updateBackendStates() {
 	the response
 */
 func (rr* RoundRobinLoadBalancer) updateBackendState(bs *datamodel.BackendServer) {
-	strURL := "http://" + bs.Host + "/health"	
+	strURL := "http://" + bs.Host + ":8081" + "/health"	
 	
 	client := http.Client{
     	Timeout: 2* time.Second,
@@ -115,7 +116,7 @@ func (rr *RoundRobinLoadBalancer) HandleBackendRegister(w http.ResponseWriter, r
 		fmt.Printf("the buf contains %s\n", buf)
 		var backendMsg datamodel.BackendRegMessage		
 		json.Unmarshal(buf,&backendMsg)
-		rr.addNewBackend(backendMsg.Host)
+		rr.addNewBackend(r.RemoteAddr)
 		rr.showState()
 }
 
@@ -128,17 +129,21 @@ func (rr *RoundRobinLoadBalancer) addNewBackend (Host string) {
 		return
 	}
 
+	Host, _, _ = net.SplitHostPort(Host)
+	// if (err != nil) {
+	// 	fmt.Printf("some error in splitting the host:port format from backend")
+	// }
 
 	myRewrite := func(pr *httputil.ProxyRequest) {
 		// Print all incoming client request headers
-
 		fmt.Printf("the client URL.Host is %s", pr.In.Host)
-
 		pr.Out.URL.Scheme = "http"
-		pr.Out.URL.Host = Host
+		pr.Out.URL.Host = Host + ":8081"
+		fmt.Printf("the backend server im forwarding the request is %s", pr.Out.URL.Host)
 		pr.Out.Header.Set("X-Forwarded-Host", pr.In.RemoteAddr)
 	}
 
+	fmt.Printf("the key im using to register the backend is %s", Host)
 
 	newBs := datamodel.NewBackendServer(Host,protocols, myRewrite)
 	rr.servers[Host] = newBs	
@@ -156,8 +161,5 @@ func (rr *RoundRobinLoadBalancer) getNext() *httputil.ReverseProxy {
 func (rr *RoundRobinLoadBalancer) Serve() func(w http.ResponseWriter, r *http.Request) {
 	return func (w http.ResponseWriter, r *http.Request) {
 		rr.getNext().ServeHTTP(w,r)
-		
-		// Handle the case where the server is not responding
-
 	} 
 }

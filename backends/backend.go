@@ -48,8 +48,10 @@ func main () {
 	// creates a Buffer type (a slice of byte) initializing it with the contents of a string
 	buf := bytes.NewBufferString(jsonStr)
 	
+	time.Sleep(2)
+
 	fmt.Println("printing the byte slice created from the jsonStr %s", buf)
-	_, err := http.Post("http://localhost:8080/register", "application/json", buf)
+	_, err := http.Post("http://load_balancer:8080/register", "application/json", buf)
 
 	if (err != nil) {
 		fmt.Printf("error on making the register to the load balancer")
