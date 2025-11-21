@@ -1,4 +1,3 @@
-import pytest
 import requests
 import time
 
@@ -8,6 +7,5 @@ def test_register_backend():
         response = requests.get("http://load_balancer:8080/lb")
         print(response.content)
         print(response.status_code)
-
 
 test_register_backend()

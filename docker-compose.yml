@@ -8,8 +8,6 @@ services:
   backends:
     build: ./backends
     entrypoint: ./build/backend 8081
-    ports: 
-      - 8081:8081
     depends_on: 
       - load_balancer
 # Container used for integration tests 
