@@ -1,6 +1,7 @@
 package main;
 
 import (
+	"lb/config"
 	"lb/algorithm"
 	"net/http"
 	"time"
@@ -17,7 +18,12 @@ func LoadBalancerServeEndpoint(endpoint string, lb ILoadBalancer) {
 }
 
 func main () {
-	
+
+	/*
+		Start the configuration manager and get configuration of the load balancer
+	*/
+	lbConfManager := config.NewLoadBalancerConfigManager()
+
 	/*
 	I want to have a go server that has a list of other urls 
 	(the actual http server to offload requests to)
@@ -31,6 +37,8 @@ func main () {
 		MaxHeaderBytes: 1 << 20,
 	}
 	lb := algorithm.NewRoundRobinLoadBalancer()
+	
+	lbConfManager.StartWatchingConfigUpdates()
 	
 	/*
 	Backend registering API, The backend sends a registering message with 

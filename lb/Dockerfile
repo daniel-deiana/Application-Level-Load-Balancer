@@ -9,6 +9,8 @@ WORKDIR /app/src
 
 RUN rm go.mod
 RUN go mod init lb
+
+RUN go get github.com/fsnotify/fsnotify@v1.9.0
 RUN go build -o build/lb core/load_balancer.go
 
 CMD ["./build/lb"]
